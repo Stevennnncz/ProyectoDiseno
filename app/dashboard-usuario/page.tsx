@@ -9,7 +9,15 @@ function getLocalDateTime(fecha: string | null | undefined, hora: string | null 
   if (!fecha || !hora) return null;
   const [year, month, day] = fecha.split('-').map(Number)
   const [h, m, s] = hora.split(':').map(Number)
-  return new Date(year, month - 1, day, h, m, s, 0)
+  
+  // Crear fecha en zona horaria específica (ej: Mexico)
+  const date = new Date(year, month - 1, day, h, m, s, 0)
+  
+  // Ajustar por diferencia de zona horaria (ej: UTC-6 para México)
+  const offsetHours = 6; // Cambia según tu zona horaria
+  date.setHours(date.getHours() + offsetHours);
+  
+  return date;
 }
 
 export default async function DashboardUsuarioPage() {
