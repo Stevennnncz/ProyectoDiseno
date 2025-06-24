@@ -54,7 +54,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             <div className="px-4 mb-2">
               <span className="text-sm font-semibold text-gray-500">Configuración</span>
             </div>
-            {/*
+            {
             <Link
               href="/dashboard/configuracion/usuarios"
               className={`flex items-center px-4 py-3 rounded-lg text-base font-medium transition-colors ${pathname === "/dashboard/configuracion/usuarios" ? "bg-white text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100"}`}
@@ -62,7 +62,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
               <Users className="h-5 w-5 mr-3" />
               Gestionar Usuarios
             </Link>
-            */}
+            }
             
             <Link
               href="/dashboard/junta-directiva"
