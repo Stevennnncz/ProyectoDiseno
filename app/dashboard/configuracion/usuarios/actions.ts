@@ -1,6 +1,6 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 interface JuntaDirectivaMiembro {
   id: string;
@@ -53,57 +53,63 @@ export async function createJuntaDirectivaUser(
   junta_directiva_miembro_id: string,
   password: string
 ) {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
+    const adminSupabase = createAdminClient(); // Cliente administrativo
 
-  // 1. Get the junta_directiva_miembro details
-  const { data: miembro, error: miembroError } = await supabase
-    .from("junta_directiva_miembros")
-    .select("id, nombre_completo, correo, puesto")
-    .eq("id", junta_directiva_miembro_id)
-    .single();
+    // 1. Get the junta_directiva_miembro details
+    const { data: miembro, error: miembroError } = await supabase
+      .from("junta_directiva_miembros")
+      .select("id, nombre_completo, correo, puesto")
+      .eq("id", junta_directiva_miembro_id)
+      .single();
 
-  if (miembroError || !miembro) {
-    console.error("Error fetching junta_directiva_miembro:", miembroError);
-    throw new Error("No se pudo encontrar el miembro de la junta directiva.");
-  }
+    if (miembroError || !miembro) {
+      console.error("Error fetching junta_directiva_miembro:", miembroError);
+      throw new Error("No se pudo encontrar el miembro de la junta directiva.");
+    }
 
-  // 2. Create user in Supabase Auth
-  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-    email: miembro.correo,
-    password: password,
-    email_confirm: true, // Automatically confirm email for internal users
-  });
-
-  if (authError) {
-    console.error("Error creating Supabase Auth user:", authError);
-    throw new Error(authError.message || "Error al crear el usuario en autenticación.");
-  }
-
-  const authUserId = authData.user?.id;
-
-  if (!authUserId) {
-    throw new Error("ID de usuario de autenticación no generado.");
-  }
-
-  // 3. Insert into public.usuarios table
-  const { data: userData, error: userInsertError } = await supabase
-    .from("usuarios")
-    .insert({
-      id: authUserId, // Use the ID from Supabase Auth
+    // 2. Create user in Supabase Auth (usando cliente administrativo)
+    
+    const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
       email: miembro.correo,
-      nombre: miembro.nombre_completo,
-      rol: miembro.puesto, // Usar el puesto del miembro de la junta como rol
-      junta_directiva_miembro_id: miembro.id,
-    })
-    .select()
-    .single();
+      password: password,
+      email_confirm: true, // Automatically confirm email for internal users
+    });    if (authError) {
+      console.error("Error creating Supabase Auth user:", authError);
+      console.error("AuthError details:", JSON.stringify(authError, null, 2));
+      throw new Error(authError.message || "Error al crear el usuario en autenticación.");
+    }
 
-  if (userInsertError) {
-    console.error("Error inserting user into public.usuarios:", userInsertError);
-    // If user insertion fails, try to delete the auth user to prevent orphaned accounts
-    await supabase.auth.admin.deleteUser(authUserId);
-    throw new Error(userInsertError.message || "Error al registrar el usuario en la base de datos.");
+    const authUserId = authData.user?.id;
+
+    if (!authUserId) {
+      console.error("No se generó ID de usuario");
+      throw new Error("ID de usuario de autenticación no generado.");
+    }
+
+    // 3. Insert into public.usuarios table
+    
+    const { data: userData, error: userInsertError } = await supabase
+      .from("usuarios")
+      .insert({
+        id: authUserId, // Use the ID from Supabase Auth
+        email: miembro.correo,
+        nombre: miembro.nombre_completo,
+        rol: miembro.puesto, // Usar el puesto del miembro de la junta como rol
+        junta_directiva_miembro_id: miembro.id,
+      })
+      .select()
+      .single();    if (userInsertError) {
+      console.error("Error inserting user into public.usuarios:", userInsertError);
+      // If user insertion fails, try to delete the auth user to prevent orphaned accounts
+      await adminSupabase.auth.admin.deleteUser(authUserId);
+      throw new Error(userInsertError.message || "Error al registrar el usuario en la base de datos.");
+    }
+    
+    return userData;
+  } catch (error) {
+    console.error("Error general en createJuntaDirectivaUser:", error);
+    throw error;
   }
-
-  return userData;
-} 
+}

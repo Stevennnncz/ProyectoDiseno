@@ -16,10 +16,10 @@ import { Loader2 } from "lucide-react"
 import { createJuntaDirectivaUser } from "@/app/dashboard/configuracion/usuarios/actions"
 
 const usuarioSchema = z.object({
-  juntaDirectivaMiembroId: z.string().optional(),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional(),
-  nombre: z.string().min(1, "El nombre es requerido").optional(),
-  email: z.string().email("Email inválido").optional(),
+  juntaDirectivaMiembroId: z.string().min(1, "Debe seleccionar un miembro de la junta directiva"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+  nombre: z.string(),
+  email: z.string()
 })
 
 type UsuarioFormValues = z.infer<typeof usuarioSchema>
@@ -68,13 +68,12 @@ export function UsuarioForm({ usuario, unassignedJuntaDirectivaMembers, onSucces
   const selectedJuntaDirectivaMiembroId = watch("juntaDirectivaMiembroId");
   const selectedMember = unassignedJuntaDirectivaMembers.find(
     (member) => member.id === selectedJuntaDirectivaMiembroId
-  );
-
-  const onSubmit = async (data: UsuarioFormValues) => {
+  );  const onSubmit = async (data: UsuarioFormValues) => {
     try {
       setIsLoading(true)
 
       if (usuario) {
+        // Modo editar
         const { error } = await supabase
           .from("usuarios")
           .update({
@@ -87,16 +86,16 @@ export function UsuarioForm({ usuario, unassignedJuntaDirectivaMembers, onSucces
 
         if (error) {
           toast.error(`Error al actualizar usuario: ${error.message}`)
-          throw error
-        }
+          throw error        }
         toast.success("Usuario actualizado exitosamente.")
       } else {
-        if (!data.juntaDirectivaMiembroId) {
+        // Modo crear - Validación manual        
+        if (!data.juntaDirectivaMiembroId || data.juntaDirectivaMiembroId.trim() === "") {
             toast.error("Debe seleccionar un miembro de la junta directiva.")
             return;
         }
-        if (!data.password) {
-            toast.error("La contraseña es requerida para nuevos usuarios.")
+        if (!data.password || data.password.length < 6) {
+            toast.error("La contraseña debe tener al menos 6 caracteres.")
             return;
         }
 
@@ -110,11 +109,10 @@ export function UsuarioForm({ usuario, unassignedJuntaDirectivaMembers, onSucces
         } else {
           throw new Error("No se pudo crear el usuario.");
         }
-      }
-
-      onSuccess?.()
+      }      onSuccess?.()
     } catch (error: any) {
-      console.error("Error detallado al guardar usuario:", JSON.stringify(error, null, 2))
+      console.error("Error al guardar usuario:", error)
+      
       if (error.message) {
         toast.error(`Error: ${error.message}`);
       } else {
@@ -173,7 +171,7 @@ export function UsuarioForm({ usuario, unassignedJuntaDirectivaMembers, onSucces
           </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Nueva Contraseña (opcional)</Label>
+                <Label htmlFor="password">Nueva Contraseña</Label>
                 <Input
                   id="password"
                   type="password"
@@ -262,8 +260,10 @@ export function UsuarioForm({ usuario, unassignedJuntaDirectivaMembers, onSucces
         <CardFooter className="flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel} type="button">
             Cancelar
-          </Button>
-          <Button type="submit" disabled={isLoading}>
+          </Button>          <Button 
+            type="submit" 
+            disabled={isLoading}
+          >
             {isLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : null}
