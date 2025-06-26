@@ -3,9 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { v4 as uuidv4 } from 'uuid';
-import { renderToBuffer } from '@react-pdf/renderer';
 import { createActaPDF } from '@/lib/acta-pdf';
-import React from 'react';
 
 export async function upsertPuntoAgenda(formData: FormData) {
   const supabase = await createClient();
@@ -522,9 +520,9 @@ export async function updateSessionStatus(sessionId: string, newStatus: string) 
         throw sesionError;
       }
 
-      // Generar el acta PDF usando @react-pdf/renderer
-      console.log('Generando PDF del acta con @react-pdf/renderer...');
-      const pdfBuffer = await renderToBuffer(createActaPDF(sesionData));
+      // Generar el acta PDF usando jsPDF
+      console.log('Generando PDF del acta con jsPDF...');
+      const pdfBuffer = createActaPDF(sesionData);
 
       // Subir el PDF a Supabase Storage
       const fileName = `acta_${sesionData.codigo_sesion.replace(/[^a-zA-Z0-9]/g, '_')}_${uuidv4()}.pdf`;
