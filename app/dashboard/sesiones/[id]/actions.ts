@@ -521,6 +521,9 @@ export async function updateSessionStatus(sessionId: string, newStatus: string) 
         throw sesionError;
       }
 
+      // TODO: Reemplazar con @react-pdf/renderer
+      // Comentado temporalmente para evitar errores de Puppeteer en Vercel
+      /*
       // 1. Generar el acta HTML
       const actaBuilder = new ActaBuilder(sesionData);
       const actaHtml = actaBuilder.build();
@@ -564,6 +567,9 @@ export async function updateSessionStatus(sessionId: string, newStatus: string) 
         console.error('Error al guardar la URL del acta en la DB:', actaInsertError);
         throw actaInsertError;
       }
+      */
+      
+      console.log('Generación de PDF temporalmente deshabilitada - sesión finalizada sin acta');
     }
 
     const { error } = await supabase
