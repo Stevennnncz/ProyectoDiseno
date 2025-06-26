@@ -3,8 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { v4 as uuidv4 } from 'uuid';
-import { ActaBuilder } from '@/lib/acta-builder';
-import html_to_pdf from 'html-pdf-node';
+import { renderToBuffer } from '@react-pdf/renderer';
+import { createActaPDF } from '@/lib/acta-pdf';
+import React from 'react';
 
 export async function upsertPuntoAgenda(formData: FormData) {
   const supabase = await createClient();
@@ -521,19 +522,11 @@ export async function updateSessionStatus(sessionId: string, newStatus: string) 
         throw sesionError;
       }
 
-      // TODO: Reemplazar con @react-pdf/renderer
-      // Comentado temporalmente para evitar errores de Puppeteer en Vercel
-      /*
-      // 1. Generar el acta HTML
-      const actaBuilder = new ActaBuilder(sesionData);
-      const actaHtml = actaBuilder.build();
+      // Generar el acta PDF usando @react-pdf/renderer
+      console.log('Generando PDF del acta con @react-pdf/renderer...');
+      const pdfBuffer = await renderToBuffer(createActaPDF(sesionData));
 
-      // 2. Convertir HTML a PDF
-      const file = { content: actaHtml };
-      const options = { format: 'A4', printBackground: true };
-      const pdfBuffer = await html_to_pdf.generatePdf(file, options);
-
-      // 3. Subir el PDF a Supabase Storage
+      // Subir el PDF a Supabase Storage
       const fileName = `acta_${sesionData.codigo_sesion.replace(/[^a-zA-Z0-9]/g, '_')}_${uuidv4()}.pdf`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('actas') // Asegúrate de que este bucket existe en Supabase
@@ -547,14 +540,14 @@ export async function updateSessionStatus(sessionId: string, newStatus: string) 
         throw uploadError;
       }
 
-      // 4. Obtener la URL pública del PDF
+      // Obtener la URL pública del PDF
       const { data: publicUrlData } = supabase.storage
         .from('actas')
         .getPublicUrl(uploadData.path);
 
       const publicUrl = publicUrlData.publicUrl;
 
-      // 5. Guardar la URL del acta en la tabla 'actas' de la base de datos
+      // Guardar la URL del acta en la tabla 'actas' de la base de datos
       const { error: actaInsertError } = await supabase
         .from('actas')
         .insert({
@@ -567,9 +560,8 @@ export async function updateSessionStatus(sessionId: string, newStatus: string) 
         console.error('Error al guardar la URL del acta en la DB:', actaInsertError);
         throw actaInsertError;
       }
-      */
-      
-      console.log('Generación de PDF temporalmente deshabilitada - sesión finalizada sin acta');
+
+      console.log('PDF del acta generado y guardado exitosamente');
     }
 
     const { error } = await supabase
