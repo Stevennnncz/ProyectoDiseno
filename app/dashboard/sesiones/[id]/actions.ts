@@ -7,7 +7,6 @@ import { createActaPDF } from '@/lib/acta-pdf';
 
 export async function upsertPuntoAgenda(formData: FormData) {
   const supabase = await createClient();
-  console.log('Server Action - Supabase client initialized:', supabase);
   const puntoId = formData.get('id') as string | null;
   const agendaId = formData.get('agenda_id') as string;
   const orden = parseInt(formData.get('orden') as string);
@@ -353,6 +352,7 @@ export async function enviarConvocatoria(formData: FormData) {
     sesion.sesiones_participantes?.forEach((participante: any) => {
       let email = '';
       let userId = '';
+      
       if (participante.junta_directiva_miembros?.correo) {
         email = participante.junta_directiva_miembros.correo;
         userId = participante.junta_directiva_miembro_id;
@@ -369,9 +369,6 @@ export async function enviarConvocatoria(formData: FormData) {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
                      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
       
-      console.log('Base URL para envío de correos:', baseUrl);
-      console.log('Enviando correos a:', internalDestinatarios);
-      
       const resInternal = await fetch(`${baseUrl}/api/send-email`, {
         method: 'POST',
         headers: {
@@ -386,10 +383,7 @@ export async function enviarConvocatoria(formData: FormData) {
 
       if (!resInternal.ok) {
         const errorData = await resInternal.json().catch(() => ({ error: 'Error al parsear respuesta' }));
-        console.error(`Error al enviar correos a participantes internos: ${errorData.error || resInternal.statusText}`);
         throw new Error(`Error al enviar correos: ${errorData.error || resInternal.statusText}`);
-      } else {
-        console.log('Correos enviados exitosamente a participantes internos');
       }
     }
 
@@ -454,8 +448,6 @@ export async function enviarConvocatoria(formData: FormData) {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
                      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
-      console.log('Enviando correo a participante externo:', participanteExterno.email);
-
       const resExternal = await fetch(`${baseUrl}/api/send-email`, {
         method: 'POST',
         headers: {
@@ -471,8 +463,6 @@ export async function enviarConvocatoria(formData: FormData) {
       if (!resExternal.ok) {
         const errorData = await resExternal.json().catch(() => ({ error: 'Error al parsear respuesta' }));
         console.error(`Error al enviar correo a participante externo ${participanteExterno.email}:`, errorData.error || resExternal.statusText);
-      } else {
-        console.log(`Correo enviado exitosamente a participante externo: ${participanteExterno.email}`);
       }
     }
 
@@ -487,8 +477,6 @@ export async function enviarConvocatoria(formData: FormData) {
 
 export async function updateSessionStatus(sessionId: string, newStatus: string) {
   const supabase = await createClient();
-
-  console.log(`Server Action: Actualizando estado de sesión ${sessionId} a ${newStatus}`);
 
   try {
     const updateData: any = { estado: newStatus };
@@ -534,12 +522,10 @@ export async function updateSessionStatus(sessionId: string, newStatus: string) 
         .single();
 
       if (sesionError) {
-        console.error('Error al obtener datos de la sesión para el acta:', sesionError);
         throw sesionError;
       }
 
       // Generar el acta PDF usando jsPDF
-      console.log('Generando PDF del acta con jsPDF...');
       const pdfBuffer = createActaPDF(sesionData);
 
       // Subir el PDF a Supabase Storage
@@ -552,7 +538,6 @@ export async function updateSessionStatus(sessionId: string, newStatus: string) 
         });
 
       if (uploadError) {
-        console.error('Error al subir el PDF a Supabase Storage:', uploadError);
         throw uploadError;
       }
 
@@ -573,11 +558,8 @@ export async function updateSessionStatus(sessionId: string, newStatus: string) 
         });
 
       if (actaInsertError) {
-        console.error('Error al guardar la URL del acta en la DB:', actaInsertError);
         throw actaInsertError;
       }
-
-      console.log('PDF del acta generado y guardado exitosamente');
     }
 
     const { error } = await supabase
@@ -600,7 +582,6 @@ export async function updateSessionStatus(sessionId: string, newStatus: string) 
 
 export async function deletePuntoAgenda(formData: FormData) {
   const supabase = await createClient();
-  console.log('Server Action - Supabase client initialized (delete):', supabase);
   const puntoId = formData.get('id') as string;
   const sesionId = formData.get('sesion_id') as string;
 
