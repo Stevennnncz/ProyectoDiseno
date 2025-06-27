@@ -56,15 +56,36 @@ export function LoginForm() {
         .single()
 
       if (userError) {
-        setError("Error al obtener el rol del usuario")
-        return
-      }
+        // Si el usuario no existe en la tabla usuarios, crearlo con rol por defecto
+        if (userError.code === 'PGRST116') { // No rows returned
+          const { error: insertError } = await supabase
+            .from('usuarios')
+            .insert({
+              id: signInData.user.id,
+              email: signInData.user.email,
+              nombre: signInData.user.email?.split('@')[0] || 'Usuario',
+              rol: 'USUARIO' // Rol por defecto
+            })
 
-      // Redirigir según el rol
-      if (userData.rol === 'ADMINISTRADOR') {
-        router.push("/dashboard")
+          if (insertError) {
+            console.error('Error al crear usuario:', insertError)
+            setError("Error al crear el perfil del usuario")
+            return
+          }
+
+          // Redirigir a dashboard de usuario por defecto
+          router.push("/dashboard-usuario")
+        } else {
+          setError("Error al obtener el rol del usuario")
+          return
+        }
       } else {
-        router.push("/dashboard-usuario")
+        // Redirigir según el rol existente
+        if (userData.rol === 'ADMINISTRADOR') {
+          router.push("/dashboard")
+        } else {
+          router.push("/dashboard-usuario")
+        }
       }
       router.refresh()
     } catch (err) {

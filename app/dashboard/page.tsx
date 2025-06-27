@@ -50,6 +50,16 @@ export default async function DashboardPage() {
 
   if (userError || !userData) {
     console.error("Error al obtener el rol del usuario:", userError)
+    console.error("User ID:", user.id)
+    console.error("User email:", user.email)
+    
+    // Verificar si el usuario existe en la tabla usuarios
+    const { data: allUsers } = await supabase
+      .from('usuarios')
+      .select('*')
+      .limit(5)
+    
+    console.log("Primeros 5 usuarios en la tabla:", allUsers)
     redirect('/login') // Redirigir si hay un error o no se encuentra el rol
   }
 
