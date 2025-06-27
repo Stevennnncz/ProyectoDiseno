@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { v4 as uuidv4 } from 'uuid';
-import { createActaPDF } from '@/lib/acta-pdf';
 
 export async function upsertPuntoAgenda(formData: FormData) {
   const supabase = await createClient();
@@ -525,40 +524,27 @@ export async function updateSessionStatus(sessionId: string, newStatus: string) 
         throw sesionError;
       }
 
-      // Generar el acta PDF usando jsPDF
-      const pdfBuffer = createActaPDF(sesionData);
+      // Generar el acta PDF usando la API route (compatible con Vercel)
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+      
+      const response = await fetch(`${baseUrl}/api/generate-acta`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionId: sessionId }),
+      });
 
-      // Subir el PDF a Supabase Storage
-      const fileName = `acta_${sesionData.codigo_sesion.replace(/[^a-zA-Z0-9]/g, '_')}_${uuidv4()}.pdf`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('actas') // Asegúrate de que este bucket existe en Supabase
-        .upload(fileName, pdfBuffer, {
-          contentType: 'application/pdf',
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw uploadError;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Error al generar el acta' }));
+        throw new Error(`Error al generar el acta: ${errorData.error || response.statusText}`);
       }
 
-      // Obtener la URL pública del PDF
-      const { data: publicUrlData } = supabase.storage
-        .from('actas')
-        .getPublicUrl(uploadData.path);
-
-      const publicUrl = publicUrlData.publicUrl;
-
-      // Guardar la URL del acta en la tabla 'actas' de la base de datos
-      const { error: actaInsertError } = await supabase
-        .from('actas')
-        .insert({
-          sesion_id: sessionId,
-          url: publicUrl,
-          fecha_generacion: new Date().toISOString()
-        });
-
-      if (actaInsertError) {
-        throw actaInsertError;
+      const actaResult = await response.json();
+      
+      if (!actaResult.success) {
+        throw new Error(`Error al generar el acta: ${actaResult.error}`);
       }
     }
 
