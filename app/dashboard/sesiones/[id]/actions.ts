@@ -365,7 +365,14 @@ export async function enviarConvocatoria(formData: FormData) {
     });
 
     if (internalDestinatarios.length > 0) {
-      const resInternal = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-email`, {
+      // Construir URL base de forma más robusta
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+      
+      console.log('Base URL para envío de correos:', baseUrl);
+      console.log('Enviando correos a:', internalDestinatarios);
+      
+      const resInternal = await fetch(`${baseUrl}/api/send-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -378,8 +385,11 @@ export async function enviarConvocatoria(formData: FormData) {
       });
 
       if (!resInternal.ok) {
-        const errorData = await resInternal.json();
+        const errorData = await resInternal.json().catch(() => ({ error: 'Error al parsear respuesta' }));
         console.error(`Error al enviar correos a participantes internos: ${errorData.error || resInternal.statusText}`);
+        throw new Error(`Error al enviar correos: ${errorData.error || resInternal.statusText}`);
+      } else {
+        console.log('Correos enviados exitosamente a participantes internos');
       }
     }
 
@@ -440,7 +450,13 @@ export async function enviarConvocatoria(formData: FormData) {
         <p>Atentamente,<br/>El Equipo de Gestión de Juntas</p>
       `;
 
-      const resExternal = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-email`, {
+      // Construir URL base de forma más robusta
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
+      console.log('Enviando correo a participante externo:', participanteExterno.email);
+
+      const resExternal = await fetch(`${baseUrl}/api/send-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -453,8 +469,10 @@ export async function enviarConvocatoria(formData: FormData) {
       });
 
       if (!resExternal.ok) {
-        const errorData = await resExternal.json();
+        const errorData = await resExternal.json().catch(() => ({ error: 'Error al parsear respuesta' }));
         console.error(`Error al enviar correo a participante externo ${participanteExterno.email}:`, errorData.error || resExternal.statusText);
+      } else {
+        console.log(`Correo enviado exitosamente a participante externo: ${participanteExterno.email}`);
       }
     }
 
